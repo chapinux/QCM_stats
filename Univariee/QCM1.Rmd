@@ -1,0 +1,277 @@
+---
+title: "Quizz Analyse Univariée"
+author: "PC"
+date: "21 juillet 2020"
+output: 
+  unilur::tutorial_html_solution:
+    toc: true
+    toc_float: false
+    toc_depth: 3
+    suffix: ""
+    theme: journal
+    highlight: kate
+    number_sections: no
+    number_subsections: no
+---
+```{r knitr_init, echo=FALSE, cache=FALSE, include=FALSE}
+library(stringr)
+library(knitr)
+## Global options
+options(max.print="90")
+opts_chunk$set(echo=TRUE,
+	             cache=FALSE, #TRUE
+               prompt=FALSE,
+               tidy=FALSE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE)
+opts_knit$set(width=90)
+options(width = 90)
+
+# no margins
+knit_hooks$set(nm = function(before, options, envir){
+  if (before){
+    par(mar=c(0,0,0,0))
+  }
+})
+
+# title margins
+knit_hooks$set(sm = function(before, options, envir){
+  if (before){
+    par(mar=c(0,0,1.2,0))
+  }
+})
+
+# boxes custom
+#remotes::install_github("koncina/unilur")
+knitr::opts_template$set(alert = list(box.title = "Watch out!",
+                                      box.body = list(fill = "#ffe0d9", colour = "black"),
+                                      box.header = list(fill = "#FFAD99", colour = "black"),
+                                      box.collapse = NULL,
+                                      box.icon = "fa-exclamation-triangle"))
+knitr::opts_template$set(solution = list(box.title = "Solution",
+                                         box.body = list(fill = "#e6f6e7", colour = "black"),
+                                         box.header = list(fill = "#ace1af", colour = "black"),
+                                         box.icon = "fa-check-square",
+                                         box.collapse = TRUE))
+knitr::opts_template$set(information = list(box.title = "Information",
+                                            box.body = list(fill = "#bbe8f4", colour = "black"),
+                                            box.header = list(fill = "#64c9e6", colour = "black"),
+                                            box.icon = "fa-info-circle",
+                                            box.collapse = NULL))
+knitr::opts_template$set(clues = list(box.title = "Clues",
+                                      box.body = list(fill = "#fff9dc", colour = "black"),
+                                      box.header = list(fill = "#ffec8b", colour = "black"),
+                                      box.icon = "fa-search",
+                                      box.collapse = TRUE))
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+```
+
+
+## Contexte  
+
+Nous explorons les variables quantitatives du jeu de données des arbres de la mairie de Paris [disponible ici](https://opendata.paris.fr/explore/dataset/les-arbres/information/?disjunctive.typeemplacement&disjunctive.arrondissement&disjunctive.libellefrancais&disjunctive.genre&disjunctive.espece&disjunctive.varieteoucultivar&disjunctive.stadedeveloppement&disjunctive.remarquable). 
+Ces données sont régulièrement mises à jour et peuvent varier si vous  exécuter le code à une date différente de celle de ce document. 
+
+
+```{r load, cache=TRUE, echo= TRUE}
+library(sf)  #pour gérer les objets spatiaux 
+library(dplyr)  # pour la manipulation de données 
+arbres <- read_sf("../../AnalyseUnivariee/les-arbres.geojson")   # path à modifier 
+plot(arbres$geometry, cex= 0.01, pch=20) #affiche le semis de points
+```
+
+
+Pour chacun des points ci-dessu, on dispose des variables suivantes  :
+
+```{r load2, cache=TRUE, echo= TRUE}
+names(arbres) 
+```
+
+
+## Mesures : Étendue , moyenne et quartiles 
+
+### Question 1
+
+Etant donné ces mesures : 
+
+```{r estim, cache=TRUE, echo= TRUE}
+summary(arbres$hauteurenm)
+```
+
+
+Comment qualifier cette distribution ? 
+
+
+1. La distribution est symétrique 
+2. La distribution est déformée à gauche 
+3. La distribution est déformée à droite 
+
+
+```{block, solution = TRUE}
+La distribution n'est clairement pas symétrique : 
+ 
+ - la moyenne et la médiane sont bien différentes
+ - l'écart entre le troisième quartile et le maximum, rapporté à celui entre le minimum et le premier quartile.
+
+
+La moyenne est supérieure au troisème quartile et supérieure à la médiane : la distribution est déformée à droite , il y a sur-représentation des valeurs élevées (i.e. supérieure à la médiane). 
+
+```
+
+
+### Question 2
+
+La moyenne de cette variable est de 13.2 m. Sachant que l'écart type est de 6.58 , la moyenne est-elle un bon indicateur de la hauteur des arbres de Paris ? (à titre de comparaison un bâtiment de trois étages fait environ 13m de haut.)
+
+```{block, solution = TRUE}
+Il est difficile d'inteprêter la moyenne et l'écart type tant que nous ne connaissons pas la forme de la distribution : la moyenne n'est un bon indicateur que lorsque la distribution est proche d'une distribution gaussienne ce qui ne semble pas être le cas
+```
+
+
+## Histogramme
+
+
+### Question 3
+
+On trace l'histogramme de la variable "hauteur":
+
+```{r distrib1, cache=TRUE }
+histo1 <-   ggplot(arbres)+
+  geom_histogram(aes(x=hauteurenm), bins = 60)+xlab("hauteur") + ylab("effectif")
+histo1
+```
+
+
+Que peut on dire de la hauteur des arbres à partir de cet histogramme ? 
+
+1. Tous les arbres sont très petits. 
+2. Tous les arbres sont très petits sauf quelques uns qui mesurent entre 0 et 750km de haut.
+3. Tel quel, on ne peut rien dire d'intéressant sur cette distribution
+
+
+
+```{block, solution = TRUE}
+Etant donné l'échelle du graphique pour l'axe des abscisses, on ne peut rien dire d'intéressant sur cette distribution; toutes les valeurs sont dans la même colonne. Au moins une valeur manifestement aberrantes est supérieure à 750 000 mètres, ce qui explique que l'étendue du graphique en abscisse  soit si grande.
+
+
+Dans ce cas il faut filtrer les valeurs aberrantes pour "voir quelque chose"
+```
+
+
+
+
+## Filtrage des valeurs aberrantes
+
+
+Certaines valeurs sont aberrantes, nous les trouvons avec la fonction `top_n` : 
+
+```{r filter1, cache=TRUE }
+top_n(arbres, 5 , hauteurenm)   # les 5 arbres les plus hauts
+```
+
+
+
+
+Nous allons filtrer les arbres pour ne conserver que les arbres dont la hauteur est inférieur ou égale à 60m (une taille déjà gigantesque pour un arbre) et supérieure ou égale  à 1m (avec la fonction `filter` du package `dplyr`)
+
+```{r filter2, cache=TRUE }
+arbres_filtered <-  filter(arbres, hauteurenm <= 60 & hauteurenm >=1  )    #filtrage
+```
+
+### Question 4
+
+On re-calcule les mesures de quartiles et de moyenne : 
+```{r filter3, cache=TRUE }
+summary(arbres_filtered$hauteurenm)   
+```
+
+Que peut-on dire de cette distribution ? 
+
+1. la distribution est très asymétrique et très déformée à droite (longue traine)
+2. la distribution est très asymétrique et très déformée à gauche (longue traine)
+3. la distribution est presque symétrique, très peu déformée 
+
+```{block, solution = TRUE}
+Médiane et moyenne sont presque confondues ce qui indique que la distribution est **presque symétrique** , ou du moins assez peu déformée.
+
+La distribution est "piquée" : le pic est étroit.
+
+Elle est néanmoins légèrement déformée sur la droite comme le montre l'écart entre le troisième quartile et le maximum, bien plus important que l'écart entre : quelques arbres très hauts "tirent" la distribution vers la droite, mais ils sont peu nombreux. Cf. l'histogramme sur données filtrées ci-dessous.
+```
+
+```{r filter4, cache=TRUE }
+histo2 <-   ggplot(arbres_filtered)+
+  geom_histogram(aes(x=hauteurenm), bins = 30, color="#cccccc", fill="#34b7eb")+
+  xlab("hauteur")+
+  ylab("effectif")+
+  ggtitle("Histogramme des hauteurs des arbres mesurant entre 1 et 100m")+
+  theme_light()
+histo2   #affichage 
+```
+
+### Question 5
+
+Au vu de l'histogramme, la moyenne (désormais de 10m environ)  est-elle un bon indicateur de la hauteur des arbres pour ce jeu de données filtrée ? 
+
+
+```{block, solution = TRUE}
+
+La moyenne se situe "au milieu du pic" de la distribution, la distribution n'est pas bi-modale : la moyenne est un indicateur acceptable pour cette distribution
+```
+
+
+## Le mode 
+
+Dans les données, la hauteur est donnée en mètres avec des valeurs entières, on peut donc directement calculer le mode.
+
+On va utiliser : 
+
+- la fonction `table` qui va compter le nombre d'arbres de même hauteur , pour chaque hauteur représentée dans les données
+- la fonction `which` qui trouve dans une collection , l'index de l'élément qui correspond à un prédicat.
+
+```{r mode2, cache=TRUE }
+comptage <-  table(arbres_filtered$hauteurenm)   # table de comptage
+names(comptage) <-  paste0(names(comptage),"m")  # renomme les colonnes de la table de comptage
+hauteur_max <-  max(comptage)                    # determination du maximum
+idxmax <-  which(comptage==hauteur_max)          # détermination de l'index de la valeur maximum  
+names(comptage)[idxmax]                          # valeur du mode
+```
+
+
+## Cartographie simple des hauteurs
+
+```{r carto1, cache=TRUE }
+plot(arbres_filtered["hauteurenm"], pch=20, cex=0.01)
+```
+
+
+### Question 6
+
+Étant donné  les informations receuillies sur la distribution, pourquoi pouvait-on s'attendre à cette carte toute bleue ? 
+
+```{block, solution = TRUE}
+
+on pouvait s'attendre à ce que la variété de couleurs visibles soit faible:  
+
+Si on observe l'histogramme, on voit que l'essentiel de l'effectif est concentré entre 5 et 15m , autour de la moyenne avec très peu de valeurs extrêmes (supérieures à 25-30m).
+
+Donc la cartographie du semis de points sera globalement d'une seule couleur, bien entendu uniquement si l'échelle de couleur est définie pour l'intervalle [1m;60m]
+
+```
+
+
+
+
+
+
+
+
+
+
+
