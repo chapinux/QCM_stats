@@ -8,10 +8,10 @@ output:
     toc_float: false
     toc_depth: 3
     suffix: ""
-    theme: journal
+    theme: lumen
     highlight: kate
-    number_sections: no
-    number_subsections: no
+    number_sections: yes
+    number_subsections: yes
 ---
 ```{r knitr_init, echo=FALSE, cache=FALSE, include=FALSE}
 library(stringr)
@@ -73,7 +73,7 @@ library(ggplot2)
 ```
 
 
-## Contexte  
+# Contexte  
 
 Nous explorons les variables quantitatives du jeu de données des arbres de la mairie de Paris [disponible ici](https://opendata.paris.fr/explore/dataset/les-arbres/information/?disjunctive.typeemplacement&disjunctive.arrondissement&disjunctive.libellefrancais&disjunctive.genre&disjunctive.espece&disjunctive.varieteoucultivar&disjunctive.stadedeveloppement&disjunctive.remarquable). 
 Ces données sont régulièrement mises à jour et peuvent varier si vous  exécuter le code à une date différente de celle de ce document. 
@@ -93,6 +93,32 @@ Pour chacun des points ci-dessu, on dispose des variables suivantes  :
 names(arbres) 
 ```
 
+
+## Question 0
+
+Voici un extrait des données : 
+
+```{r load3, cache=TRUE, echo= FALSE}
+head(arbres %>% as.data.frame() %>% na.omit()) 
+```
+
+Au vu de cet extrait, et en mettant de côté les deux dernières variables ` geo_point_2d` et `geometry`,  combien y a t'il de variables quantitatives dans ce jeu de données ? 
+
+1. quatre variables
+2. trois variables 
+3. deux variables
+
+```{block, solution = TRUE}
+Il y a deux variables quantitatives : `circonferneceencm` et `hauteurenm`.
+
+les variables `idbase` et `remarquable` sont des variables qualitatives, bien qu'apparemment modélisées par un nombre : ce sont respectivement un identifiant et un statut. 
+```
+
+
+
+----
+
+# Analyse de la hauteur des arbres
 
 ## Mesures : Étendue , moyenne et quartiles 
 
@@ -117,7 +143,7 @@ Comment qualifier cette distribution ?
 La distribution n'est clairement pas symétrique : 
  
  - la moyenne et la médiane sont bien différentes
- - l'écart entre le troisième quartile et le maximum, rapporté à celui entre le minimum et le premier quartile.
+ - l'écart entre le troisième quartile et le maximum est très important, comparé à celui entre le minimum et le premier quartile.
 
 
 La moyenne est supérieure au troisème quartile et supérieure à la médiane : la distribution est déformée à droite , il y a sur-représentation des valeurs élevées (i.e. supérieure à la médiane). 
@@ -130,7 +156,7 @@ La moyenne est supérieure au troisème quartile et supérieure à la médiane :
 La moyenne de cette variable est de 13.2 m. Sachant que l'écart type est de 6.58 , la moyenne est-elle un bon indicateur de la hauteur des arbres de Paris ? (à titre de comparaison un bâtiment de trois étages fait environ 13m de haut.)
 
 ```{block, solution = TRUE}
-Il est difficile d'inteprêter la moyenne et l'écart type tant que nous ne connaissons pas la forme de la distribution : la moyenne n'est un bon indicateur que lorsque la distribution est proche d'une distribution gaussienne ce qui ne semble pas être le cas
+Il est difficile d'inteprêter la moyenne et l'écart type tant que nous ne connaissons pas la forme de la distribution : la moyenne n'est un bon indicateur que lorsque la distribution est proche d'une distribution gaussienne ce qui ne semble pas être le cas pour le moment. Il faut donc suspendre son jugement
 ```
 
 
@@ -205,6 +231,8 @@ La distribution est "piquée" : le pic est étroit.
 Elle est néanmoins légèrement déformée sur la droite comme le montre l'écart entre le troisième quartile et le maximum, bien plus important que l'écart entre : quelques arbres très hauts "tirent" la distribution vers la droite, mais ils sont peu nombreux. Cf. l'histogramme sur données filtrées ci-dessous.
 ```
 
+### Question 5
+
 ```{r filter4, cache=TRUE }
 histo2 <-   ggplot(arbres_filtered)+
   geom_histogram(aes(x=hauteurenm), bins = 30, color="#cccccc", fill="#34b7eb")+
@@ -214,8 +242,6 @@ histo2 <-   ggplot(arbres_filtered)+
   theme_light()
 histo2   #affichage 
 ```
-
-### Question 5
 
 Au vu de l'histogramme, la moyenne (désormais de 10m environ)  est-elle un bon indicateur de la hauteur des arbres pour ce jeu de données filtrée ? 
 
@@ -238,8 +264,8 @@ On va utiliser :
 ```{r mode2, cache=TRUE }
 comptage <-  table(arbres_filtered$hauteurenm)   # table de comptage
 names(comptage) <-  paste0(names(comptage),"m")  # renomme les colonnes de la table de comptage
-hauteur_max <-  max(comptage)                    # determination du maximum
-idxmax <-  which(comptage==hauteur_max)          # détermination de l'index de la valeur maximum  
+hauteur_mode <-  max(comptage)                    # determination du maximum
+idxmax <-  which(comptage==hauteur_mode)          # détermination de l'index de la valeur maximum  
 names(comptage)[idxmax]                          # valeur du mode
 ```
 
@@ -265,11 +291,124 @@ Donc la cartographie du semis de points sera globalement d'une seule couleur, bi
 
 ```
 
+# Analyse de la circonférence des arbres 
+
+On s'intéresse maintenant à l'autre variable quantitative : la circonférence des arbres. 
+
+## Mesures : Étendue , moyenne et quartiles 
+
+
+```{r estimCirco, cache=TRUE, echo= TRUE}
+summary(arbres$circonferenceencm)
+```
+
+### Question 7
+
+Comment qualifier cette distribution ? 
+
+
+1. La distribution est symétrique 
+2. La distribution est déformée à gauche 
+3. La distribution est déformée à droite 
+
+
+```{block, solution = TRUE}
+
+La réponse est identique à celle pour la hauteur des arbres : la distribution est déformée à droite.
+La valeur maximum est clairement aberrante.
+
+```
+
+
+
+## Histogramme
 
 
 
 
+On trace l'histogramme de la variable "circonférence":
 
+```{r distribCirco1, cache=TRUE }
+histo1 <-   ggplot(arbres)+
+  geom_histogram(aes(x=circonferenceencm), bins = 60)+xlab("circonférence") + ylab("effectif")
+histo1
+```
+
+
+Le même problème que pour la hauteur se pose : des valeurs aberrantes doivent être filtrées
+
+
+
+
+Nous allons filtrer les arbres pour ne conserver que les arbres dont la circonférence est inférieur ou égale à 15m  soit 1500cm.
+
+```{r filterCirco2, cache=TRUE }
+arbres_filtered <-  filter(arbres, circonferenceencm <= 1500 & circonferenceencm > 0)    #filtrage
+```
+
+### Question 4
+
+On re-calcule les mesures de quartiles et de moyenne : 
+```{r filterCirco3, cache=TRUE }
+summary(arbres_filtered$circonferenceencm)   
+```
+
+Que peut-on dire de cette distribution ? 
+
+1. la distribution est très asymétrique et très déformée à droite (longue traine)
+2. la distribution est très asymétrique et très déformée à gauche (longue traine)
+3. la distribution est presque symétrique, très peu déformée 
+
+```{block, solution = TRUE}
+La distribution est déformée à droite : la moyenne est supérieure à la médiane , et l'écart entre le dernier quartile et le maximum est plus important.
+```
+
+### Question 5
+
+```{r filterCirco4, cache=TRUE }
+histo2 <-   ggplot(arbres_filtered)+
+  geom_histogram(aes(x=circonferenceencm), bins = 50, color="#cccccc", fill="#34b7eb")+
+  xlab("circonférence")+
+  ylab("effectif")+
+  ggtitle("Histogramme des circonférences des arbres")+
+  theme_light()
+histo2   #affichage 
+```
+
+
+## Le mode 
+
+De la même façon que pour la hauteur, on détermine le mode de la circonférence. Cette fois nous allons faire des classes de circonféren,ces tous les 5cms
+
+```{r modeCirco2, cache=TRUE }
+
+comptage <-  table(arbres_filtered$circonferenceencm)   # table de comptage
+names(comptage) <-  paste0(names(comptage)," cm")  # renomme les colonnes de la table de comptage
+circo_mode <-  max(comptage)                    # determination du maximum
+idxmax <-  which(comptage==circo_mode)          # détermination de l'index de la valeur maximum  
+names(comptage)[idxmax]                          # valeur du mode
+```
+
+
+## Cartographie simple des hauteurs
+
+```{r cartoCirco1, cache=TRUE }
+plot(arbres_filtered["circonferenceencm"], pch=20, cex=0.01)
+```
+
+
+### Question 6
+
+Étant donné  les informations receuillies sur la distribution, pourquoi pouvait-on s'attendre à cette carte toute bleue ? 
+
+```{block, solution = TRUE}
+
+on pouvait s'attendre à ce que la variété de couleurs visibles soit faible:  
+
+Si on observe l'histogramme, on voit que l'essentiel de l'effectif est concentré sur une faible amplitude de circonférence, correspondant à une gamme de couleur uniforme , tandis que quelques individus rares (à circonférence élevée) sont colorés différement , mais invisibles du fait de leur faible représentation dans la population.
+
+Donc la cartographie du semis de points sera globalement d'une seule couleur, bien entendu  si l'échelle de couleur est définie pour l'intervalle [1cm;1500cm]
+``` 
 
 
 
